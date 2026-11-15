@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/goProductAPI/entity"
 )
@@ -13,7 +12,7 @@ import (
 func GetProductHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		//Read JSON file
-		data, err := os.ReadFile("./data/data.json")
+		data, err := entity.GetProducts()
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
@@ -30,11 +29,13 @@ func CreateProductHandler() http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		// Read incoming JSON from request body
 		data, err := io.ReadAll(r.Body)
+
 		// If no body is associated return with StatusBadRequest
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
 		// Check if data is proper JSON (data validation)
 		var product entity.Product
 		err = json.Unmarshal(data, &product)
@@ -44,36 +45,11 @@ func CreateProductHandler() http.HandlerFunc {
 			return
 		}
 
-		// Load existing products and append the data to product list
-		var products []entity.Product
-		data, err = os.ReadFile("./data/data.json")
+		err = entity.AddProduct(product)
 		if err != nil {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		// Load our JSON file to memory using array of products
-		err = json.Unmarshal(data, &products)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		// Add new Product to our list
-		products = append(products, product)
-
-		// Write Updated JSON file
-		updatedData, err := json.MarshalIndent(products, "", "    ")
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		err = os.WriteFile("./data/data.json", updatedData, os.ModePerm)
-		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		// return after writing Body
 		rw.WriteHeader(http.StatusCreated)
 		rw.Write([]byte("Added New Product"))
